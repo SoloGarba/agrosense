@@ -196,6 +196,8 @@ def init_db():
     conn.commit()
     conn.close()
 
+init_db()
+
 def log_prediction(module, input_data, result, confidence=None):
     try:
         conn = sqlite3.connect('agrosense.db')
@@ -443,5 +445,4 @@ def logs():
     return render_template('logs.html', records=records)
 
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
