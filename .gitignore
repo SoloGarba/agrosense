@@ -14,9 +14,6 @@ venv/
 env/
 .venv/
 
-# Model artifacts are hosted separately
-saved_models/
-
 # User uploads and local prediction database
 static/uploads/*
 !static/uploads/.gitkeep
