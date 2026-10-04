@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}AgroSense - Crop Recommendation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-leaf"></i> Crop Recommendation</h1>
+    <p>Enter your soil and environmental data to get the best crop recommendation</p>
+</div>
+
+<div class="page-container">
+    <div class="card">
+        <h2>Soil &amp; Environmental Parameters</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label><i class="fas fa-flask"></i> Nitrogen (N) — kg/ha
+                    <span class="tooltip-icon" title="Soil nitrogen level. Typical range: 0–140 kg/ha">ⓘ</span>
+                </label>
+                <input type="number" id="N" placeholder="e.g. 90" min="0" max="200"
+                       oninput="validateField(this, 0, 200, 'N')">
+                <small class="field-hint">Range: 0 – 200 kg/ha</small>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-flask"></i> Phosphorus (P) — kg/ha
+                    <span class="tooltip-icon" title="Soil phosphorus level. Typical range: 0–145 kg/ha">ⓘ</span>
+                </label>
+                <input type="number" id="P" placeholder="e.g. 42" min="0" max="200"
+                       oninput="validateField(this, 0, 200, 'P')">
+                <small class="field-hint">Range: 0 – 200 kg/ha</small>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-flask"></i> Potassium (K) — kg/ha
+                    <span class="tooltip-icon" title="Soil potassium level. Yam and plantain need high K (150+)">ⓘ</span>
+                </label>
+                <input type="number" id="K" placeholder="e.g. 43" min="0" max="300"
+                       oninput="validateField(this, 0, 300, 'K')">
+                <small class="field-hint">Range: 0 – 300 kg/ha</small>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-thermometer-half"></i> Temperature (°C)
+                    <span class="tooltip-icon" title="Average daily temperature in degrees Celsius">ⓘ</span>
+                </label>
+                <input type="number" id="temperature" placeholder="e.g. 28" min="0" max="50"
+                       oninput="validateField(this, 0, 50, 'Temperature')">
+                <small class="field-hint">Range: 0 – 50 °C</small>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-tint"></i> Humidity (%)
+                    <span class="tooltip-icon" title="Relative humidity as a percentage">ⓘ</span>
+                </label>
+                <input type="number" id="humidity" placeholder="e.g. 65" min="0" max="100"
+                       oninput="validateField(this, 0, 100, 'Humidity')">
+                <small class="field-hint">Range: 0 – 100 %</small>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-vial"></i> Soil pH
+                    <span class="tooltip-icon" title="Soil pH level. Most Nigerian crops prefer 5.5–7.0">ⓘ</span>
+                </label>
+                <input type="number" id="ph" placeholder="e.g. 6.5" min="0" max="14" step="0.1"
+                       oninput="validateField(this, 0, 14, 'pH')">
+                <small class="field-hint">Range: 0 – 14</small>
+            </div>
+            <div class="form-group form-group-full">
+                <label><i class="fas fa-cloud-rain"></i> Rainfall (mm/month)
+                    <span class="tooltip-icon" title="Average monthly rainfall in millimetres. Millet/sorghum need 20–70, rice needs 200+">ⓘ</span>
+                </label>
+                <input type="number" id="rainfall" placeholder="e.g. 120" min="0" max="400"
+                       oninput="validateField(this, 0, 400, 'Rainfall')">
+                <small class="field-hint">Range: 0 – 400 mm/month</small>
+            </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="getCropRecommendation()">
+            <i class="fas fa-seedling"></i> Get Recommendation
+        </button>
+    </div>
+
+    <div class="card" id="resultCard" style="display:none;">
+        <h2>Recommendation Result</h2>
+        <div id="loadingSpinner" class="spinner" style="display:none;"></div>
+        <div id="cropResult"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+
+async function getCropRecommendation() {
+    const fields = ['N','P','K','temperature','humidity','ph','rainfall'];
+    const data = {};
+    for (const f of fields) {
+        const val = document.getElementById(f).value;
+        if (!val) { alert(`Please enter ${f}`); return; }
+        data[f] = parseFloat(val);
+    }
+
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('cropResult').innerHTML = '';
+
+    try {
+        const response = await fetch('/predict_crop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        document.getElementById('loadingSpinner').style.display = 'none';
+
+        if (result.error) {
+            document.getElementById('cropResult').innerHTML =
+                `<div class="alert alert-danger">${result.error}</div>`;
+        } else {
+            const top3Html = result.top3.map((c, i) => `
+                <div class="top-crop ${i === 0 ? 'top-crop-winner' : ''}">
+                    <span class="rank">#${i+1}</span>
+                    <span class="crop-name">${c.crop.charAt(0).toUpperCase() + c.crop.slice(1)}</span>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width:${c.confidence}%"></div>
+                    </div>
+                    <span class="confidence-label">${c.confidence}%</span>
+                </div>`).join('');
+
+            document.getElementById('cropResult').innerHTML = `
+                <div class="result-header healthy">
+                    <i class="fas fa-trophy"></i>
+                    <h3>${result.recommended_crop.charAt(0).toUpperCase() + result.recommended_crop.slice(1)}</h3>
+                    <span class="confidence">Confidence: ${result.confidence}%</span>
+                </div>
+                <div class="result-details">
+                    <h4>Top 3 Recommendations</h4>
+                    <div class="top-crops">${top3Html}</div>
+                </div>`;
+        }
+    } catch(err) {
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('cropResult').innerHTML =
+            `<div class="alert alert-danger">${err.message}</div>`;
+    }
+}
+function validateField(input, min, max, name) {
+    const val = parseFloat(input.value);
+    const hint = input.nextElementSibling;
+    if (isNaN(val)) return;
+    if (val < min || val > max) {
+        input.style.borderColor = 'var(--red)';
+        hint.style.color = 'var(--red)';
+        hint.textContent = `${name} must be between ${min} and ${max}`;
+    } else {
+        input.style.borderColor = 'var(--green-mid)';
+        hint.style.color = 'var(--grey-400)';
+        hint.textContent = `Range: ${min} – ${max}${input.id === 'ph' ? '' : input.id === 'temperature' ? ' °C' : input.id === 'humidity' ? ' %' : input.id === 'rainfall' ? ' mm/month' : ' kg/ha'}`;
+    }
+}
+</script>
+{% endblock %}

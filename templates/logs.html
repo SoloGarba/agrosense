@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}AgroSense - Prediction Logs{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-database"></i> Prediction Log</h1>
+    <p>Last 100 predictions recorded by the system</p>
+</div>
+
+<div class="page-container" style="max-width:1100px;">
+    <div class="card">
+        <h2>System Predictions</h2>
+        {% if records %}
+        <div style="overflow-x:auto;">
+            <table class="log-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Module</th>
+                        <th>Result</th>
+                        <th>Confidence</th>
+                        <th>Input Data</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td class="log-id">{{ r.id }}</td>
+                        <td>
+                            <span class="log-badge log-badge-{{ r.module }}">
+                                {{ r.module }}
+                            </span>
+                        </td>
+                        <td class="log-result">{{ r.result }}</td>
+                        <td class="log-conf">
+                            {% if r.confidence %}
+                                {{ r.confidence }}%
+                            {% elif r.module == 'yield' %}
+                                R²: 0.9738
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td class="log-input">{{ r.input_data }}</td>
+                        <td class="log-ts">{{ r.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color:var(--grey-400); text-align:center; padding:2rem;">
+            No predictions logged yet.
+        </p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

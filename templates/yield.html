@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}AgroSense - Yield Prediction{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-chart-line"></i> Yield Prediction</h1>
+    <p>Predict expected crop yield based on environmental and soil conditions</p>
+</div>
+
+<div class="page-container">
+    <div class="card">
+        <h2>Farm Parameters</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label><i class="fas fa-map-marker-alt"></i> Country / Region</label>
+                <select id="area">
+                    <option value="Niger" selected>Nigeria</option>
+                    {% for a in areas %}
+                    <option value="{{ a }}">{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-seedling"></i> Crop</label>
+                <select id="item">
+                    {% for c in crops %}
+                    <option value="{{ c }}">{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-calendar"></i> Year</label>
+                <input type="number" id="year" value="2013" min="1990" max="2030">
+                <small style="color:var(--grey-400); font-size:11px; margin-top:4px; display:block;">Model trained on FAO data up to 2013. Later years are extrapolated estimates.</small>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-thermometer-half"></i> Avg Temperature (°C)</label>
+                <input type="number" id="temperature" placeholder="e.g. 28" step="0.1">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-cloud-rain"></i> Annual Rainfall (mm)</label>
+                <input type="number" id="rainfall" placeholder="e.g. 1200">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-spray-can"></i> Pesticides (tonnes)</label>
+                <input type="number" id="pesticides" placeholder="e.g. 50" step="0.1">
+            </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="predictYield()">
+            <i class="fas fa-calculator"></i> Predict Yield
+        </button>
+    </div>
+
+    <div class="card" id="resultCard" style="display:none;">
+        <h2>Yield Prediction Result</h2>
+        <div id="loadingSpinner" class="spinner" style="display:none;"></div>
+        <div id="yieldResult"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function predictYield() {
+    const data = {
+        area: document.getElementById('area').value,
+        item: document.getElementById('item').value,
+        year: document.getElementById('year').value,
+        temperature: document.getElementById('temperature').value,
+        rainfall: document.getElementById('rainfall').value,
+        pesticides: document.getElementById('pesticides').value
+    };
+
+    for (const [k, v] of Object.entries(data)) {
+        if (!v) { alert(`Please enter ${k}`); return; }
+    }
+
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('yieldResult').innerHTML = '';
+
+    try {
+        const response = await fetch('/predict_yield', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        document.getElementById('loadingSpinner').style.display = 'none';
+
+        if (result.error) {
+            document.getElementById('yieldResult').innerHTML =
+                `<div class="alert alert-danger">${result.error}</div>`;
+        } else {
+            document.getElementById('yieldResult').innerHTML = `
+                <div class="result-header healthy">
+                    <i class="fas fa-chart-bar"></i>
+                    <h3>${result.yield_ton_per_ha} tons/ha</h3>
+                    <span class="confidence">${result.crop} in ${result.area}</span>
+                </div>
+                <div class="result-details">
+                    <div class="result-item">
+                        <strong><i class="fas fa-info-circle"></i> Interpretation</strong>
+                        <p>${result.interpretation}</p>
+                    </div>
+                </div>`;
+        }
+    } catch(err) {
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('yieldResult').innerHTML =
+            `<div class="alert alert-danger">${err.message}</div>`;
+    }
+}
+</script>
+{% endblock %}

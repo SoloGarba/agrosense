@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}AgroSense - Home{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h1>Smart Agriculture System</h1>
+        <p>AI-powered crop disease detection, yield prediction, and crop recommendation for West African farmers</p>
+        <div class="hero-buttons">
+            <a href="/disease" class="btn btn-primary">
+                <i class="fas fa-microscope"></i> Detect Disease
+            </a>
+            <a href="/recommend" class="btn btn-secondary">
+                <i class="fas fa-leaf"></i> Get Recommendation
+            </a>
+            <a href="/yield" class="btn btn-secondary">
+                <i class="fas fa-chart-line"></i> Predict Yield
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="features">
+    <div class="features-container">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-microscope"></i>
+            </div>
+            <h3>Disease Detection</h3>
+            <p>Upload a photo of your crop leaf and our AI model will identify diseases across 22 classes covering Maize, Cassava, Tomato, and Cashew — trained on real West African field images.</p>
+            <a href="/disease" class="btn btn-outline">Try Now</a>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-leaf"></i>
+            </div>
+            <h3>Crop Recommendation</h3>
+            <p>Enter your soil nutrients, pH, temperature, humidity, and rainfall data to get an AI-powered recommendation of the best crop to grow under your conditions.</p>
+            <a href="/recommend" class="btn btn-outline">Try Now</a>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>Yield Prediction</h3>
+            <p>Input your environmental and soil parameters to predict expected crop yield in tons per hectare, helping you plan resources and market strategies in advance.</p>
+            <a href="/yield" class="btn btn-outline">Try Now</a>
+        </div>
+    </div>
+</section>
+
+<section class="stats">
+    <div class="stats-container">
+        <div class="stat">
+            <h2>22</h2>
+            <p>Disease Classes</p>
+        </div>
+        <div class="stat">
+            <h2>99.55%</h2>
+            <p>Crop Recommendation Accuracy</p>
+        </div>
+        <div class="stat">
+            <h2>97.38%</h2>
+            <p>Yield Prediction R² Score</p>
+        </div>
+        <div class="stat">
+            <h2>4</h2>
+            <p>Crops Covered</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

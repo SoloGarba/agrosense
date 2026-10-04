@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Model artifacts are hosted separately
+saved_models/
+
+# User uploads and local prediction database
+static/uploads/*
+!static/uploads/.gitkeep
+agrosense.db
+
+# Local datasets and archives
+data/*.zip
+data/*.csv
+!data/.gitkeep
+
+# Editor and OS files
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets and local configuration
+.env
+*.env
+
+# Notebooks and logs
+.ipynb_checkpoints/
+*.ipynb
+*.log

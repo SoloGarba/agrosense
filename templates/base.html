@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AgroSense - Smart Agriculture System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <i class="fas fa-seedling"></i>
+                AgroSense
+            </a>
+            <ul class="nav-links">
+                <li><a href="/" class="{% if request.endpoint == 'index' %}active{% endif %}">
+                    <i class="fas fa-home"></i> Home
+                </a></li>
+                <li><a href="/disease" class="{% if request.endpoint == 'disease' %}active{% endif %}">
+                    <i class="fas fa-microscope"></i> Disease Detection
+                </a></li>
+                <li><a href="/recommend" class="{% if request.endpoint == 'recommend' %}active{% endif %}">
+                    <i class="fas fa-leaf"></i> Crop Recommendation
+                </a></li>
+                <li><a href="/yield" class="{% if request.endpoint == 'yield_page' %}active{% endif %}">
+                    <i class="fas fa-chart-line"></i> Yield Prediction
+                </a></li>
+            </ul>
+            <li><a href="/logs" class="{% if request.endpoint == 'logs' %}active{% endif %}">
+    <i class="fas fa-database"></i> Logs
+</a></li>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <p>&copy; 2025 AgroSense &mdash; Smart Agriculture System</p>
+            <p>Department of Computer Science, Modibbo Adama University</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

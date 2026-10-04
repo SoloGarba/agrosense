@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block title %}AgroSense - Disease Detection{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-microscope"></i> Crop Disease Detection</h1>
+    <p>Upload a clear photo of a crop leaf to identify diseases and get treatment recommendations</p>
+</div>
+
+<div class="page-container">
+    <div class="card">
+        <h2>Upload Leaf Image</h2>
+        <div class="upload-zone" id="uploadZone" role="button" tabindex="0"
+             aria-label="Choose a crop leaf image to upload">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Click to upload or drag and drop</p>
+            <span>Supports: JPG, PNG (Max 16MB)</span>
+            <input type="file" id="imageInput" accept=".jpg,.jpeg,.png" hidden>
+        </div>
+        <div id="uploadError" class="alert alert-danger" role="alert" style="display:none;"></div>
+        <img id="preview" class="img-preview" src="" alt="Preview" style="display:none;">
+        <button class="btn btn-primary btn-full" id="analyzeBtn" onclick="analyzeDisease()" disabled>
+            <i class="fas fa-search"></i> Analyze Image
+        </button>
+    </div>
+
+    <div class="card" id="resultCard" style="display:none;">
+        <h2>Analysis Result</h2>
+        <div id="loadingSpinner" class="spinner" style="display:none;"></div>
+        <div id="diseaseResult"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const uploadZone = document.getElementById('uploadZone');
+const imageInput = document.getElementById('imageInput');
+const preview    = document.getElementById('preview');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const uploadError = document.getElementById('uploadError');
+let selectedFile = null;
+const maxFileSize = 16 * 1024 * 1024;
+const allowedTypes = new Set(['image/jpeg', 'image/png']);
+
+uploadZone.addEventListener('click', () => imageInput.click());
+uploadZone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        imageInput.click();
+    }
+});
+
+uploadZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    uploadZone.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+
+uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+});
+
+imageInput.addEventListener('change', () => {
+    if (imageInput.files[0]) handleFile(imageInput.files[0]);
+    imageInput.value = '';
+});
+
+function showUploadError(message) {
+    uploadError.textContent = message;
+    uploadError.style.display = 'block';
+}
+
+function handleFile(file) {
+    uploadError.style.display = 'none';
+    if (!allowedTypes.has(file.type)) {
+        showUploadError('Invalid file. Please choose a JPG or PNG image.');
+        return;
+    }
+    if (file.size > maxFileSize) {
+        showUploadError('Image is too large. Please choose a file smaller than 16 MB.');
+        return;
+    }
+
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onerror = () => showUploadError('The image could not be read. Please try another file.');
+    reader.onload = e => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        analyzeBtn.disabled = false;
+        uploadZone.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+}
+
+async function analyzeDisease() {
+    const file = selectedFile;
+    if (!file) return;
+
+    document.getElementById('resultCard').style.display = 'block';
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('diseaseResult').innerHTML = '';
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const response = await fetch('/predict_disease', {
+            method: 'POST',
+            body: formData
+        });
+        if (!response.ok) {
+            throw new Error(`Analysis failed (${response.status}). Please try again.`);
+        }
+        const data = await response.json();
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        document.getElementById('loadingSpinner').style.display = 'none';
+
+        if (data.is_uncertain) {
+            document.getElementById('diseaseResult').innerHTML = `
+                <div class="result-header healthy">
+                    <i class="fas fa-question-circle"></i>
+                    <h3>Unable to Identify Disease</h3>
+                    <span class="confidence">Confidence too low (${data.confidence}%)</span>
+                </div>
+                <div class="result-details">
+                    <div class="result-item">
+                        <strong><i class="fas fa-info-circle"></i> What this means</strong>
+                        <p>The leaf does not show clear signs of any disease in our database.
+                        This could mean the leaf is healthy, the disease is in an early stage,
+                        or the image quality is insufficient for accurate analysis.</p>
+                    </div>
+                    <div class="result-item">
+                        <strong><i class="fas fa-lightbulb"></i> Suggestions</strong>
+                        <p>Try uploading a clearer, well-lit close-up photo of the affected leaf.
+                        If symptoms persist, consult an agricultural extension worker.</p>
+                    </div>
+                    <h4 style="margin-top:16px; font-size:0.95rem; color:var(--grey-600);">
+                        Top predictions considered:
+                    </h4>
+                    <div class="top-crops">
+                        ${data.top3.map((p, i) => `
+                        <div class="top-crop ${i === 0 ? 'top-crop-winner' : ''}">
+                            <span class="rank">#${i+1}</span>
+                            <span class="crop-name">${p.disease}</span>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width:${p.confidence}%"></div>
+                            </div>
+                            <span class="confidence-label">${p.confidence}%</span>
+                        </div>`).join('')}
+                    </div>
+                </div>`;
+
+        } else {
+            const isHealthy = data.is_healthy;
+            document.getElementById('diseaseResult').innerHTML = `
+                <div class="result-header ${isHealthy ? 'healthy' : 'diseased'}">
+                    <i class="fas ${isHealthy ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i>
+                    <h3>${data.disease}</h3>
+                    <span class="confidence">Confidence: ${data.confidence}%</span>
+                </div>
+                ${data.low_confidence ? `
+                <div class="alert alert-warning" style="margin-top:12px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Low confidence result. Try a clearer, closer photo in good lighting.
+                </div>` : ''}
+                <div class="result-details" style="margin-top:16px;">
+                    <div class="result-item">
+                        <strong><i class="fas fa-bug"></i> Cause</strong>
+                        <p>${data.cause}</p>
+                    </div>
+                    <div class="result-item">
+                        <strong><i class="fas fa-eye"></i> Symptoms</strong>
+                        <p>${data.symptoms}</p>
+                    </div>
+                    ${!isHealthy ? `
+                    <div class="result-item">
+                        <strong><i class="fas fa-pills"></i> Treatment</strong>
+                        <p>${data.treatment}</p>
+                    </div>` : ''}
+                    <div class="result-item">
+                        <strong><i class="fas fa-shield-alt"></i> Prevention</strong>
+                        <p>${data.prevention}</p>
+                    </div>
+                    <h4 style="margin-top:16px; font-size:0.95rem; color:var(--grey-600);">
+                        Top 3 predictions:
+                    </h4>
+                    <div class="top-crops">
+                        ${data.top3.map((p, i) => `
+                        <div class="top-crop ${i === 0 ? 'top-crop-winner' : ''}">
+                            <span class="rank">#${i+1}</span>
+                            <span class="crop-name">${p.disease}</span>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width:${p.confidence}%"></div>
+                            </div>
+                            <span class="confidence-label">${p.confidence}%</span>
+                        </div>`).join('')}
+                    </div>
+                </div>`;
+        }
+    } catch (err) {
+        document.getElementById('diseaseResult').innerHTML =
+            `<div class="alert alert-danger" role="alert"><i class="fas fa-exclamation-circle"></i> ${err.message || 'Analysis failed. Please try again.'}</div>`;
+    } finally {
+        document.getElementById('loadingSpinner').style.display = 'none';
+    }
+
+        analyzeBtn.disabled = false;
+    analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Again';
+    analyzeBtn.onclick = function() {
+        // Reset upload zone for new image
+        preview.style.display = 'none';
+        uploadZone.style.display = 'block';
+        imageInput.value = '';
+        selectedFile = null;
+        uploadError.style.display = 'none';
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Image';
+        analyzeBtn.onclick = analyzeDisease;
+        document.getElementById('resultCard').style.display = 'none';
+    };
+}
+</script>
+{% endblock %}
