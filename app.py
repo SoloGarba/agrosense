@@ -12,6 +12,7 @@ from PIL import Image
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 
@@ -442,6 +443,5 @@ def logs():
     return render_template('logs.html', records=records)
 
 if __name__ == '__main__':
-    os.makedirs('static/uploads', exist_ok=True)
     init_db()
     app.run(debug=True)
