@@ -33,6 +33,7 @@ desktop.ini
 # Secrets and local configuration
 .env
 *.env
+SmartAgri*.docx
 
 # Notebooks and logs
 .ipynb_checkpoints/

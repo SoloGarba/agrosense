@@ -364,19 +364,20 @@ def predict_crop():
     except Exception as e:
         return jsonify({'error': str(e)})
 
-# ── Yield prediction ───────────────────────────────────────
 @app.route('/predict_yield', methods=['POST'])
 def predict_yield():
     try:
         data = request.get_json()
-        area = data['area']
-        item = data['item']
-        year = float(data['year'])
-        rainfall = float(data['rainfall'])
-        pesticides = float(data['pesticides'])
-        temp = float(data['temperature'])
+        area        = data['area']
+        item        = data['item']
+        year        = float(data['year'])
+        rainfall    = float(data['rainfall'])
+        pesticides  = float(data['pesticides'])
+        temp        = float(data['temperature'])
+        farm_size   = float(data['farm_size'])
+        soil_quality = data['soil_quality']
+        soil_type   = data['soil_type']
 
-        # Handle unseen labels gracefully
         if area not in yield_le_area.classes_:
             area = 'Niger'
         if item not in yield_le_item.classes_:
@@ -386,28 +387,72 @@ def predict_yield():
         item_enc = yield_le_item.transform([item])[0]
 
         features = pd.DataFrame([[area_enc, item_enc, year,
-                          rainfall, pesticides, temp]],
-                        columns=['Area_enc', 'Item_enc', 'Year',
-                                 'average_rain_fall_mm_per_year',
-                                 'pesticides_tonnes', 'avg_temp'])
-        prediction = yield_model.predict(features)[0]
-        prediction = round(float(prediction), 2)
+                                   rainfall, pesticides, temp]],
+                                columns=['Area_enc', 'Item_enc', 'Year',
+                                         'average_rain_fall_mm_per_year',
+                                         'pesticides_tonnes', 'avg_temp'])
+
+        base_yield = float(yield_model.predict(features)[0])
+
+        # Provisional scenario factors; these exact values need local validation.
+        soil_quality_factors = {
+            'Excellent': 1.20,
+            'Good':      1.05,
+            'Average':   0.90,
+            'Poor':      0.72
+        }
+
+        soil_type_factors = {
+            'Loamy':      1.10,
+            'Silt Loam':  1.05,
+            'Sandy Loam': 1.00,
+            'Clay':       0.87,
+            'Sandy':      0.75,
+            'Laterite':   0.65
+        }
+
+        # Farm size scales total production, not the per-hectare yield estimate.
+        if farm_size < 1:
+            size_label = "Very small farm (< 1 ha)"
+        elif farm_size <= 5:
+            size_label = "Small farm (1–5 ha)"
+        elif farm_size <= 20:
+            size_label = "Medium farm (5–20 ha)"
+        else:
+            size_label = "Large farm (> 20 ha)"
+
+        sq_factor  = soil_quality_factors.get(soil_quality, 1.0)
+        st_factor  = soil_type_factors.get(soil_type, 1.0)
+
+        adjusted_yield = round(base_yield * sq_factor * st_factor, 2)
+        total_production = round(adjusted_yield * farm_size, 2)
+        base_yield     = round(base_yield, 2)
 
         log_prediction(
             module='yield',
             input_data={
                 'area': area, 'item': item, 'year': year,
                 'rainfall': rainfall, 'pesticides': pesticides,
-                'temperature': temp
+                'temperature': temp, 'farm_size': farm_size,
+                'soil_quality': soil_quality, 'soil_type': soil_type
             },
-            result=str(prediction),
+            result=str(adjusted_yield),
             confidence=None
         )
+
         return jsonify({
-            'yield_ton_per_ha': prediction,
-            'crop': item,
-            'area': area,
-            'interpretation': interpret_yield(item, prediction)
+            'yield_ton_per_ha':      adjusted_yield,
+            'base_yield':            base_yield,
+            'total_production_tonnes': total_production,
+            'crop':                  item,
+            'area':                  area,
+            'farm_size_ha':          farm_size,
+            'size_label':            size_label,
+            'soil_quality':          soil_quality,
+            'soil_type':             soil_type,
+            'soil_quality_factor':   sq_factor,
+            'soil_type_factor':      st_factor,
+            'interpretation':        interpret_yield(item, adjusted_yield)
         })
     except Exception as e:
         return jsonify({'error': str(e)})

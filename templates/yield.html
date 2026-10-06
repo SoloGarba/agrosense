@@ -4,16 +4,17 @@
 {% block content %}
 <div class="page-header">
     <h1><i class="fas fa-chart-line"></i> Yield Prediction</h1>
-    <p>Predict expected crop yield based on environmental and soil conditions</p>
+    <p>Estimate yield per hectare and projected production for your farm</p>
 </div>
 
 <div class="page-container">
     <div class="card">
         <h2>Farm Parameters</h2>
-        <div class="form-grid">
+        <form id="yieldForm">
+            <div class="form-grid">
             <div class="form-group">
-                <label><i class="fas fa-map-marker-alt"></i> Country / Region</label>
-                <select id="area">
+                <label for="area"><i class="fas fa-map-marker-alt"></i> Country / Region</label>
+                <select id="area" required>
                     <option value="Niger" selected>Nigeria</option>
                     {% for a in areas %}
                     <option value="{{ a }}">{{ a }}</option>
@@ -21,34 +22,61 @@
                 </select>
             </div>
             <div class="form-group">
-                <label><i class="fas fa-seedling"></i> Crop</label>
-                <select id="item">
+                <label for="item"><i class="fas fa-seedling"></i> Crop</label>
+                <select id="item" required>
                     {% for c in crops %}
                     <option value="{{ c }}">{{ c }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="form-group">
-                <label><i class="fas fa-calendar"></i> Year</label>
-                <input type="number" id="year" value="2013" min="1990" max="2030">
+                <label for="year"><i class="fas fa-calendar"></i> Year</label>
+                <input type="number" id="year" value="2013" min="1990" max="2030" required>
                 <small style="color:var(--grey-400); font-size:11px; margin-top:4px; display:block;">Model trained on FAO data up to 2013. Later years are extrapolated estimates.</small>
             </div>
             <div class="form-group">
-                <label><i class="fas fa-thermometer-half"></i> Avg Temperature (°C)</label>
-                <input type="number" id="temperature" placeholder="e.g. 28" step="0.1">
+                <label for="temperature"><i class="fas fa-thermometer-half"></i> Avg Temperature (°C)</label>
+                <input type="number" id="temperature" placeholder="e.g. 28" step="0.1" required>
             </div>
             <div class="form-group">
-                <label><i class="fas fa-cloud-rain"></i> Annual Rainfall (mm)</label>
-                <input type="number" id="rainfall" placeholder="e.g. 1200">
+                <label for="rainfall"><i class="fas fa-cloud-rain"></i> Annual Rainfall (mm)</label>
+                <input type="number" id="rainfall" placeholder="e.g. 1200" min="0" step="any" required>
             </div>
             <div class="form-group">
-                <label><i class="fas fa-spray-can"></i> Pesticides (tonnes)</label>
-                <input type="number" id="pesticides" placeholder="e.g. 50" step="0.1">
+                <label for="pesticides"><i class="fas fa-spray-can"></i> Pesticides (tonnes)</label>
+                <input type="number" id="pesticides" placeholder="e.g. 50" min="0" step="any" required>
+            </div>
+            <div class="form-group">
+                <label for="farm_size"><i class="fas fa-ruler-combined"></i> Farm Size (hectares)</label>
+                <input type="number" id="farm_size" placeholder="e.g. 2.5" min="0.01" step="any" required>
+            </div>
+            <div class="form-group">
+                <label for="soil_quality"><i class="fas fa-chart-bar"></i> Soil Quality</label>
+                <select id="soil_quality" required>
+                    <option value="" disabled selected>Select soil quality</option>
+                    <option value="Excellent">Excellent</option>
+                    <option value="Good">Good</option>
+                    <option value="Average">Average</option>
+                    <option value="Poor">Poor</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="soil_type"><i class="fas fa-mountain"></i> Soil Type</label>
+                <select id="soil_type" required>
+                    <option value="" disabled selected>Select soil type</option>
+                    <option value="Loamy">Loamy</option>
+                    <option value="Silt Loam">Silt Loam</option>
+                    <option value="Sandy Loam">Sandy Loam</option>
+                    <option value="Clay">Clay</option>
+                    <option value="Sandy">Sandy</option>
+                    <option value="Laterite">Laterite</option>
+                </select>
             </div>
         </div>
-        <button class="btn btn-primary btn-full" onclick="predictYield()">
+        <button class="btn btn-primary btn-full" type="submit">
             <i class="fas fa-calculator"></i> Predict Yield
         </button>
+        </form>
     </div>
 
     <div class="card" id="resultCard" style="display:none;">
@@ -61,19 +89,19 @@
 
 {% block scripts %}
 <script>
-async function predictYield() {
+document.getElementById('yieldForm').addEventListener('submit', async event => {
+    event.preventDefault();
     const data = {
         area: document.getElementById('area').value,
         item: document.getElementById('item').value,
         year: document.getElementById('year').value,
         temperature: document.getElementById('temperature').value,
         rainfall: document.getElementById('rainfall').value,
-        pesticides: document.getElementById('pesticides').value
+        pesticides: document.getElementById('pesticides').value,
+        farm_size: document.getElementById('farm_size').value,
+        soil_quality: document.getElementById('soil_quality').value,
+        soil_type: document.getElementById('soil_type').value
     };
-
-    for (const [k, v] of Object.entries(data)) {
-        if (!v) { alert(`Please enter ${k}`); return; }
-    }
 
     document.getElementById('resultCard').style.display = 'block';
     document.getElementById('loadingSpinner').style.display = 'block';
@@ -103,6 +131,22 @@ async function predictYield() {
                         <strong><i class="fas fa-info-circle"></i> Interpretation</strong>
                         <p>${result.interpretation}</p>
                     </div>
+                    <div class="result-item">
+                        <strong><i class="fas fa-sliders-h"></i> Adjusted for</strong>
+                        <p>${result.farm_size_ha} ha (${result.size_label}), ${result.soil_quality.toLowerCase()} soil quality, ${result.soil_type} soil.</p>
+                    </div>
+                    <div class="result-item">
+                        <strong><i class="fas fa-chart-line"></i> Baseline estimate</strong>
+                        <p>${result.base_yield} tons/ha before soil scenario adjustments.</p>
+                    </div>
+                    <div class="result-item">
+                        <strong><i class="fas fa-weight-hanging"></i> Projected farm production</strong>
+                        <p>${result.total_production_tonnes} tonnes across ${result.farm_size_ha} hectares.</p>
+                    </div>
+                    <div class="result-item">
+                        <strong><i class="fas fa-exclamation-circle"></i> Soil adjustment status</strong>
+                        <p>Soil factors are provisional scenarios, not calibrated against local yield observations.</p>
+                    </div>
                 </div>`;
         }
     } catch(err) {
@@ -110,6 +154,6 @@ async function predictYield() {
         document.getElementById('yieldResult').innerHTML =
             `<div class="alert alert-danger">${err.message}</div>`;
     }
-}
+});
 </script>
 {% endblock %}

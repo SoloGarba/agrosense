@@ -101,9 +101,13 @@ Open your browser and go to: `http://127.0.0.1:5000`
 ### Yield Prediction
 1. Click **Yield Prediction**
 2. Select your country/region and crop type
-3. Enter year, temperature, annual rainfall, and pesticide usage
+3. Enter year, temperature, annual rainfall, pesticide usage, farm size, soil quality, and soil type
 4. Click **Predict Yield**
 5. The system returns predicted yield in tons/hectare with a qualitative interpretation
+
+The Random Forest provides a baseline yield per hectare from the FAO features. Farm size is used to calculate projected total production; it does not apply a blanket farm-size penalty to yield per hectare. Soil-quality and soil-type factors are provisional scenario multipliers, not coefficients learned from the FAO data or calibrated against local field observations.
+
+This distinction matters because farm-size/productivity relationships are not universally monotonic. Omotilewa et al. (2021) report a U-shaped relationship across Nigerian farm sizes, which does not justify the previous rule that yield per hectare always falls as farm size increases: [A revisit of farm size and productivity](https://doi.org/10.1016/j.worlddev.2021.105592). A Nigerian field study of soil texture and crop response likewise reports crop- and location-specific results rather than general soil-class multipliers: [Stephen and Fagbola (2022)](https://doi.org/10.62773/jcocs.v3i1.149).
 
 ### Prediction Logs
 Navigate to `http://127.0.0.1:5000/logs` to view the last 100 predictions across all three modules.
