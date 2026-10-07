@@ -452,12 +452,20 @@ def predict_yield():
             'soil_type':             soil_type,
             'soil_quality_factor':   sq_factor,
             'soil_type_factor':      st_factor,
-            'interpretation':        interpret_yield(item, adjusted_yield)
+            'interpretation':        interpret_yield(item, adjusted_yield, area)
         })
     except Exception as e:
         return jsonify({'error': str(e)})
 
-def interpret_yield(crop, value):
+def interpret_yield(crop, value, area=None):
+    if crop == 'Maize' and area in {'Nigeria', 'Niger'}:
+        lower_bound, upper_bound = 1.8, 2.5
+        if value < lower_bound:
+            return 'Below the thesis-cited Nigeria comparison range (1.8-2.5 tons/ha).'
+        if value <= upper_bound:
+            return 'Within the thesis-cited Nigeria comparison range (1.8-2.5 tons/ha).'
+        return 'Above the thesis-cited Nigeria comparison range (1.8-2.5 tons/ha).'
+
     benchmarks = {
         'Maize': 3.0, 'Rice, paddy': 3.5, 'Cassava': 12.0,
         'Yams': 12.0, 'Sorghum': 1.5, 'Millet': 1.2,

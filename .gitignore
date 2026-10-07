@@ -33,7 +33,15 @@ desktop.ini
 # Secrets and local configuration
 .env
 *.env
-SmartAgri*.docx
+
+# Local thesis documents and generated figures
+*.doc
+*.docx
+*.docm
+*.dot
+*.dotx
+*.dotm
+Figure_3_1_Iterative_Incremental_SDLC.svg
 
 # Notebooks and logs
 .ipynb_checkpoints/
